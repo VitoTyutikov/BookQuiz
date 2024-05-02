@@ -1,8 +1,11 @@
 import json
+import os
 import tiktoken
 import PyPDF2
 from openai import OpenAI
 import time
+
+from api_openai.kafka.producer import send_questions_by_title
 
 client = OpenAI()
 
@@ -32,7 +35,7 @@ def split_text_to_fit_token_limit(text, encoding, max_tokens=15000):
 
 
 def extract_chapters_text(pdf_path, encoding):
-    general_outlines = ['Cover', 'Title Page', 'Copyright Page', 'Contents', 'Foreword', 'Preface',
+    general_outlines = ['Cover', 'Title Page', 'Copyright Page', 'Copyright', 'Credits', 'www.PacktPub.com', 'About the Author', 'About the Reviewers',  'Contents', 'Foreword', 'Preface',
                         'Acknowledgments', 'Index', 'Table of Contents', 'List of Tables', 'List of Figures', 'References',
                         'Appendix', 'Об авторах', 'Об изображении на обложке', 'Предисловие', 'Введение', 'Предметный указатель']
 
@@ -53,7 +56,7 @@ def extract_chapters_text(pdf_path, encoding):
                     except:
                         continue
 
-        for i in range(len(chapter_starts)-11):  # TODO: remove -11
+        for i in range(len(chapter_starts)-8):  # TODO: remove -11
             title, start_page = chapter_starts[i]
             end_page = chapter_starts[i+1][1] if i + \
                 1 < len(chapter_starts) else len(reader.pages)
@@ -79,16 +82,27 @@ def extract_chapters_text(pdf_path, encoding):
 # encoding = tiktoken.encoding_for_model("gpt-4")
 # encoding = tiktoken.encoding_for_model("gpt-4-turbo")
 
-def generate_questions(file_path:str):
+# def send_questions_by_title(title, questions_by_title, current_title, total_titles):
+#     grouped_questions = json.dumps(
+#         {"title": title, "questions": questions_by_title[title]}, indent=4, ensure_ascii=False)
+
+#     # TODO: change writing to file to send via kafka and add to database
+#     with open(f'./{title}.json', 'w') as file:
+#         file.write(grouped_questions)
+
+
+def generate_questions(file_path: str):
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
     # pdf_path = '/home/shieldbr/projects/BookQuiz/api_openai/test_books/Joshua_Bloch_-_Effective_Java_3rd__2018_ENG.pdf'
     # pdf_path = '/home/shieldbr/projects/BookQuiz/api_openai/test_books/Java оптимизация программ.pdf'
     # chapters = extract_chapters_text(pdf_path, encoding)
+    # print([x[0] for x in os.walk("./")])
+    
+    book_id = file_path.split('/')[-1].split('_')[0]
     chapters = extract_chapters_text(file_path, encoding)
     for title, chapter_text in chapters:
         print(f"Title: {title}, Tokens: {len(encoding.encode(chapter_text))}")
-
 
     # encoding = tiktoken.get_encoding("cl100k_base")
     # encoding = tiktoken.encoding_for_model("gpt-4")
@@ -96,17 +110,15 @@ def generate_questions(file_path:str):
 
     prev_title = chapters[0][0]
     questions_by_title = {}
+    total_titles = len(chapters)
+    current_title = 1
     for title, chapter in chapters:
         choosed_model = "gpt-3.5-turbo"
         if prev_title != title:
-            grouped_questions = json.dumps(
-                {"title": prev_title, "questions": questions_by_title[prev_title]}, indent=4, ensure_ascii=False)
-            with open(f'./{prev_title}.json', 'w') as file:
-                file.write(grouped_questions)
-            print("Next title started")  # TODO: add function to send it to user
-
+            send_questions_by_title(book_id,
+                prev_title, questions_by_title, current_title, total_titles)
             prev_title = title
-            # questions_by_title[title] = []
+            current_title = current_title + 1
 
         response = client.chat.completions.create(
             model=choosed_model,  # Replace with your GPT-4 model name
@@ -132,9 +144,15 @@ def generate_questions(file_path:str):
         questions_by_title[title].extend(questions)
         time.sleep(30)
 
+    send_questions_by_title(book_id,title, questions_by_title,
+                            current_title, total_titles)
 
-    final_questions = json.dumps(
-        {"title": title, "questions": questions_by_title[title]}, indent=4, ensure_ascii=False)
-    with open(f'./{title}.json', 'w') as file:
-        file.write(final_questions)
-        # print(final_questions)
+    # print("\n\n", questions_by_title, "\n\n")
+    # final_questions = json.dumps(
+    #     {"title": title, "questions": questions_by_title[title]}, indent=4, ensure_ascii=False)
+    # with open(f'./{title}.json', 'w') as file:
+    #     file.write(final_questions)
+    # print(final_questions)
+
+
+# generate_questions('/home/shieldbr/projects/BookQuiz/api_openai/files/buildind RESTful web service with spring.pdf')
