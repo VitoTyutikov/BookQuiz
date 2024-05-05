@@ -1,3 +1,4 @@
+import logging
 from confluent_kafka import Consumer, KafkaException, KafkaError
 import sys
 
@@ -30,7 +31,7 @@ def kafka_consumer():
                     sys.stderr.write('%% %s [%d] reached end at offset %d\n' %
                                      (msg.topic(), msg.partition(), msg.offset()))
                 elif msg.error():
-                    raise KafkaException(msg.error())
+                   logging.error(msg.error())
             else:
                 sys.stdout.write('Received message: %s\n' %
                                  (msg.value().decode('utf-8')))

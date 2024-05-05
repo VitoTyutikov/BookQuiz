@@ -37,7 +37,8 @@ def split_text_to_fit_token_limit(text, encoding, max_tokens=15000):
 def extract_chapters_text(pdf_path, encoding):
     general_outlines = ['Cover', 'Title Page', 'Copyright Page', 'Copyright', 'Credits', 'www.PacktPub.com', 'About the Author', 'About the Reviewers',  'Contents', 'Foreword', 'Preface',
                         'Acknowledgments', 'Index', 'Table of Contents', 'List of Tables', 'List of Figures', 'References',
-                        'Appendix', 'Об авторах', 'Об изображении на обложке', 'Предисловие', 'Введение', 'Предметный указатель']
+                        'Appendix', 'Об авторах', 'Об изображении на обложке', 'Предисловие', 
+                        'Предметный указатель','Вступительное слово','Благодарности']
 
     chapters = []
     chapter_starts = []
@@ -55,8 +56,9 @@ def extract_chapters_text(pdf_path, encoding):
                         chapter_starts.append((item.title, page_number))
                     except:
                         continue
+                    
 
-        for i in range(len(chapter_starts)-8):  # TODO: remove -11
+        for i in range(len(chapter_starts)):
             title, start_page = chapter_starts[i]
             end_page = chapter_starts[i+1][1] if i + \
                 1 < len(chapter_starts) else len(reader.pages)

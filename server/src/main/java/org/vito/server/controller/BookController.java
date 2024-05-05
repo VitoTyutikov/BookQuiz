@@ -1,24 +1,22 @@
 package org.vito.server.controller;
 
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.vito.server.dto.PythonUploadResponse;
 import org.vito.server.dto.UploadResponse;
-import org.vito.server.entity.BookEntity;
+import org.vito.server.entity.Book;
 import org.vito.server.kafka.KafkaProducer;
 import org.vito.server.service.BookService;
 
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/books")
@@ -47,7 +45,7 @@ public class BookController {
             return ResponseEntity.badRequest().body(new UploadResponse(null, null, "File is too big"));
         }
         try {
-            var book = new BookEntity();
+            var book = new Book();
             book.setBookTitle(file.getOriginalFilename());
             var savedBook = bookService.save(book);
 
@@ -70,16 +68,61 @@ public class BookController {
             if (response.getStatusCode() != HttpStatus.OK) {
                 throw new Exception(response.getBody().getError());
             }
-            return ResponseEntity.ok(new UploadResponse(savedBook.getBookId(), savedBook.getBookTitle(), null));
+            return ResponseEntity.ok(new UploadResponse(savedBook.getBookId(), file.getOriginalFilename(), null));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(new UploadResponse(null, null, e.getMessage()));
         }
     }
 
-    @RequestMapping(value = "/book/generate", method = RequestMethod.POST)
-    public void generate(@RequestParam("bookId") Long bookId, @RequestParam("filename") String filename) {
-        kafkaProducer.sendMessage(bookId + "_" + filename);
-        System.out.println("Generation request sent for: " + bookId + "_" + filename);
+    @RequestMapping(value = "/book/generate",
+            consumes = "text/plain",
+            method = RequestMethod.POST)
+    public void generate(@RequestBody String nameWithId) {
+        System.out.println(nameWithId);
+        var splitBook = Arrays.stream(nameWithId.split("_")).toList();
+        long bookId = Long.parseLong(nameWithId.split("_")[0]);
+        var book = bookService.getBookById(bookId);
+//        if (book == null) {
+//            book = bookService.getBookByTitle(String.join("_", splitBook.subList(1, splitBook.size())));
+//            return;
+//        }
+
+        if (!book.getChapters().isEmpty()) {
+            return;
+        }
+        kafkaProducer.sendMessage(nameWithId);
+        System.out.println("Generation request sent for: " + bookId);
     }
+
+
+    //TODO: delete it
+    @RequestMapping(value = "/book/file/upload/test", method = RequestMethod.POST)
+    public ResponseEntity<UploadResponse> uploadFileTest(@RequestParam("file") MultipartFile file) {
+        if (!Objects.equals(file.getContentType(), "application/pdf")) {
+            return ResponseEntity.badRequest().body(new UploadResponse(null, null, "Only pdf files are allowed"));
+        }
+
+        if (file.getSize() > 105 * 1024 * 1024) {
+            return ResponseEntity.badRequest().body(new UploadResponse(null, null, "File is too big"));
+        }
+
+        return ResponseEntity.ok(new UploadResponse(1L, file.getOriginalFilename(), null));
+
+
+    }
+
+    //TODO: delete it
+    @RequestMapping(value = "/book/generate/test", method = RequestMethod.GET)
+    public void generateTest(@RequestParam("name_with_id") String nameWithId) {
+//        kafkaProducer.sendMessage(bookId + "_" + filename);
+        System.out.println("Generation request sent for: " + nameWithId);
+    }
+
+
+    @RequestMapping(value = "/book/{id}", method = RequestMethod.GET)
+    public Book getQuestions(@PathVariable("id") Long bookId) {
+        return bookService.getBookById(bookId);
+    }
+
 
 }

@@ -1,12 +1,12 @@
 package org.vito.server.repo;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.vito.server.entity.ChapterEntity;
+import org.vito.server.entity.Chapter;
 
 import java.util.Optional;
 
-public interface ChapterRepository extends JpaRepository<ChapterEntity, Long> {
+public interface ChapterRepository extends JpaRepository<Chapter, Long> {
 
-    Optional<ChapterEntity> findByChapterId(Long chapterId);
-    Optional<ChapterEntity> findByChapterTitle(String chapterTitle);
+    Optional<Chapter> findByChapterId(Long chapterId);
+    Optional<Chapter> findByChapterTitle(String chapterTitle);
 }

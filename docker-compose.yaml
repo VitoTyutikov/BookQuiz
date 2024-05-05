@@ -1,6 +1,7 @@
 version: '2'
 services:
   zookeeper:
+    restart: always
     image: confluentinc/cp-zookeeper:latest
     tmpfs: "/datalog"
     environment:

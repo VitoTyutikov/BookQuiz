@@ -1,5 +1,6 @@
 package org.vito.server.entity;
 
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,19 +15,16 @@ import java.util.Set;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChapterEntity {
+public class Book {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column
-    private Long chapterId;
+    private Long bookId;
 
     @Column(nullable = false)
-    private String chapterTitle;
+    private String bookTitle;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "book_id", nullable = false)
-    private BookEntity book;
 
-    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<QuestionEntity> questions = new HashSet<>();
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Chapter> chapters = new HashSet<>();
 }

@@ -1,6 +1,7 @@
 package org.vito.server.entity;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -15,7 +16,7 @@ import java.util.Set;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class QuestionEntity {
+public class Question {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long questionId;
@@ -23,11 +24,12 @@ public class QuestionEntity {
     @Column(name = "question_text", length = 1024, nullable = false)
     private String questionText;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "chapter_id")
-    private ChapterEntity chapter;
+    private Chapter chapter;
 
     @OneToMany(mappedBy = "question", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<AnswerEntity> answers = new HashSet<>();
+    private Set<Answer> answers = new HashSet<>();
 
 }
