@@ -50,6 +50,14 @@ public class BookController {
         if (file.getSize() > 105 * 1024 * 1024) {
             return ResponseEntity.badRequest().body(new UploadResponse(null, null, "File is too big"));
         }
+
+        //if book with this name exists: return that book
+        var bookInRepo = bookService.findBookByTitle(file.getOriginalFilename());
+        if (bookInRepo != null) {
+            return ResponseEntity.ok(new UploadResponse(bookInRepo.getBookId(), file.getOriginalFilename(), null));
+        }
+
+        //else create
         try {
             var book = new Book();
             book.setBookTitle(file.getOriginalFilename());
@@ -71,6 +79,7 @@ public class BookController {
             ResponseEntity<PythonUploadResponse> response = restTemplate.postForEntity(pythonUploadURL + "/file/upload", requestEntity, PythonUploadResponse.class);
 
             if (response.getStatusCode() != HttpStatus.OK) {
+                bookService.deleteBookById(savedBook.getBookId());
                 throw new Exception(Objects.requireNonNull(response.getBody()).getError());
             }
             return ResponseEntity.ok(new UploadResponse(savedBook.getBookId(), file.getOriginalFilename(), null));
@@ -86,7 +95,7 @@ public class BookController {
         System.out.println(nameWithId);
         var splitBook = Arrays.stream(nameWithId.split("_")).toList();
         long bookId = Long.parseLong(nameWithId.split("_")[0]);
-        var book = bookService.getBookById(bookId);
+        var book = bookService.findBookById(bookId);
 //        if (book == null) {
 //            book = bookService.getBookByTitle(String.join("_", splitBook.subList(1, splitBook.size())));
 //            return;
@@ -101,15 +110,15 @@ public class BookController {
 
 
     @RequestMapping(value = "/book/{id}", method = RequestMethod.GET)
-    public ResponseEntity<Book> getQuestions(@PathVariable("id") Long bookId) throws JsonProcessingException {
-        return ResponseEntity.ok().body(bookService.getBookById(bookId));
+    public ResponseEntity<Book> getQuestions(@PathVariable("id") Long bookId) {
+        return ResponseEntity.ok().body(bookService.findBookById(bookId));
     }
 
 
     @RequestMapping(value = "/book/getfile/word/{id}", method = RequestMethod.GET, produces = "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     public ResponseEntity<ByteArrayResource> getQuestionsFile(@PathVariable("id") Long bookId) {
         try {
-            Book book = bookService.getBookById(bookId);
+            Book book = bookService.findBookById(bookId);
 
             ObjectMapper mapper = new ObjectMapper();
             String bookJson = mapper.writeValueAsString(book);
@@ -119,7 +128,6 @@ public class BookController {
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
 
 
             HttpEntity<RequestQuestionsFileDTO> requestEntity = new HttpEntity<>(requestQuestionsFileDTO, headers);

@@ -1,21 +1,25 @@
 import json
+import logging
+import sys
 from confluent_kafka import Producer
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s\t - %(levelname)s\t : %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 def kafka_producer():
     conf = {
         'bootstrap.servers': "localhost:29092",  # Adjust as per your Kafka setup
-
     }
     return Producer(**conf)
 
 
 def delivery_callback(err, msg):
     if err:
-        print('ERROR: Message failed delivery: {}'.format(err))
+        logging.warning('ERROR: Message failed delivery: {}'.format(err))
     else:
-        print("Produced event to topic {topic}: key = {key:12} value = {value:12}".format(
-            topic=msg.topic(), key=msg.key().decode('utf-8'), value=msg.value().decode('utf-8')))
+        logging.info("Produced event to topic {topic:30}:  value = {value:30}".format(
+            topic=msg.topic(),  value=msg.value().decode('utf-8')[0:30]))
 
 
 def send_questions_by_title(book_id, title, start_page, questions_by_title, current_title, total_titles):
@@ -33,7 +37,7 @@ def send_questions_by_title(book_id, title, start_page, questions_by_title, curr
                      str(grouped_questions),
                      callback=delivery_callback)
     
-    producer.poll(10000)
+    # producer.poll(10000)
     producer.flush()  # Ensure all messages are sent
 
     # print(f"Sent progress for {current_title} of {total_titles}")

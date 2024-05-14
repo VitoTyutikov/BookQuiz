@@ -3,11 +3,11 @@ package org.vito.server.booksplit.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.vito.server.booksplit.dto.GenerationResponseDTO;
-import org.vito.server.booksplit.repo.AnswerRepository;
 import org.vito.server.booksplit.entity.Answer;
 import org.vito.server.booksplit.entity.Book;
 import org.vito.server.booksplit.entity.Chapter;
 import org.vito.server.booksplit.entity.Question;
+import org.vito.server.booksplit.repo.AnswerRepository;
 import org.vito.server.booksplit.repo.BookRepository;
 import org.vito.server.booksplit.repo.ChapterRepository;
 import org.vito.server.booksplit.repo.QuestionRepository;
@@ -32,11 +32,11 @@ public class BookService {
         return bookRepository.save(book);
     }
 
-    public Book getBookById(Long bookId) {
+    public Book findBookById(Long bookId) {
         return bookRepository.findById(bookId).orElse(null);
     }
 
-    public Book getBookByTitle(String bookTitle) {
+    public Book findBookByTitle(String bookTitle) {
         return bookRepository.findByBookTitle(bookTitle).orElse(null);
     }
 
@@ -79,6 +79,14 @@ public class BookService {
 
     public Book save(Book book) {
         return bookRepository.save(book);
+    }
+
+    public void delete(Book book) {
+        bookRepository.delete(book);
+    }
+
+    public void deleteBookById(Long bookId) {
+        bookRepository.deleteById(bookId);
     }
 
 

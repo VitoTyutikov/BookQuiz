@@ -21,11 +21,11 @@ public class Answer {
     @Column(nullable = false)
     private String answerText;
 
-    @Column(columnDefinition = "boolean default false",nullable = false)
+    @Column(columnDefinition = "boolean default false", nullable = false)
     private Boolean isCorrect;
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY,cascade = CascadeType.ALL)
+    @ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "question_id")
     private Question question;
 

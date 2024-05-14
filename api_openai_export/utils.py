@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import tiktoken
 import PyPDF2
@@ -8,6 +9,10 @@ import time
 from api_openai_export.kafka.producer import send_questions_by_title
 
 client = OpenAI()
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s\t - %(levelname)s\t : %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 
 def split_text_to_fit_token_limit(text, encoding, max_tokens=15000):
@@ -34,7 +39,7 @@ def split_text_to_fit_token_limit(text, encoding, max_tokens=15000):
     return parts
 
 
-def extract_chapters_text(pdf_path, encoding):
+def extract_chapters_text(pdf_path, encoding, max_tokens=15000):
     general_outlines = ['Cover', 'Title Page', 'Copyright Page', 'Copyright', 'Credits', 'www.PacktPub.com', 'About the Author', 'About the Reviewers',  'Contents', 'Foreword', 'Preface',
                         'Acknowledgments', 'Index', 'Table of Contents', 'List of Tables', 'List of Figures', 'References',
                         'Appendix', 'Об авторах', 'Об изображении на обложке', 'Предисловие',
@@ -46,16 +51,18 @@ def extract_chapters_text(pdf_path, encoding):
     with open(pdf_path, 'rb') as file:
         reader = PyPDF2.PdfReader(file)
         outlines = reader.outline
-
-        for item in outlines:
-            if not isinstance(item, list):
-                if item.title not in general_outlines:
-                    try:
-                        page_number = reader.get_destination_page_number(
-                            item) + 1
-                        chapter_starts.append((item.title, page_number))
-                    except:
-                        continue
+        if(len(outlines) == 0):
+            chapter_starts.append(("Book doesn't have outlines", 0))
+        else:
+            for item in outlines:
+                if not isinstance(item, list):
+                    if item.title not in general_outlines:
+                        try:
+                            page_number = reader.get_destination_page_number(
+                                item) + 1
+                            chapter_starts.append((item.title, page_number))
+                        except:
+                            continue
 
         for i in range(len(chapter_starts)):
             title, start_page = chapter_starts[i]
@@ -71,29 +78,40 @@ def extract_chapters_text(pdf_path, encoding):
                     continue
 
             chapter_parts = split_text_to_fit_token_limit(
-                chapter_text, encoding)
+                chapter_text, encoding, max_tokens)
             for part in chapter_parts:
-                chapters.append((start_page, title, part))
+                chapters.append((start_page, title.replace('\n', ' '), part))
 
     return chapters
 
 
 def generate_questions(file_path: str):
+
     choosed_model = "gpt-3.5-turbo"
+    # choosed_model = "gpt-4"
+    # choosed_model = "gpt-4o"
+
     encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-    # encoding = tiktoken.get_encoding("cl100k_base")
-    # encoding = tiktoken.encoding_for_model("gpt-4")
-    # encoding = tiktoken.encoding_for_model("gpt-4-turbo")
+
+    max_tokens = 9200
+    sleep_time = 10
+    if choosed_model == "gpt-4o":
+        sleep_time = 20
+        encoding = tiktoken.encoding_for_model("gpt-4o")
+    elif choosed_model == "gpt-4":
+        sleep_time = 60
+        encoding = tiktoken.encoding_for_model("gpt-4")
 
     book_id = file_path.split('/')[-1].split('_')[0]
-    chapters = extract_chapters_text(file_path, encoding)
+    chapters = extract_chapters_text(file_path, encoding, max_tokens)
+    
     for start_page, title, chapter_text in chapters:
-        print(
+        logging.info(
             f"Start page: {start_page}, Title: {title}, Tokens: {len(encoding.encode(chapter_text))}")
 
     prev_title = chapters[0][1]
     questions_by_title = {}
-    total_titles = len(chapters[1])
+    total_titles = len(chapters)
     current_title = 1
     prev_start_page = chapters[0][0]
     for start_page, title, chapter in chapters:
@@ -103,7 +121,6 @@ def generate_questions(file_path: str):
                                     prev_title, prev_start_page, questions_by_title, current_title, total_titles)
             prev_start_page = start_page
             prev_title = title
-            current_title = current_title + 1
 
         response = client.chat.completions.create(
             model=choosed_model,
@@ -114,7 +131,7 @@ def generate_questions(file_path: str):
                 There should be only one correct answer for each question.\
                 Response should be JSON object. It should have fileds with names: \"questions\" for questions(array),\
                 \"question\" for question(string), \"answers\" for answers(array), \"answer\" for answer(string) and \"is_correct\" for each answer."
-                },
+                 },
                 {"role": "user", "content": chapter +
                     "\n Create 2 questions on the text above in the language of the text, language is important. Don't use the word text in questions."}
             ],
@@ -124,10 +141,13 @@ def generate_questions(file_path: str):
         questions = json.loads(
             str(response.choices[0].message.content)).get('questions')
 
+        logging.info(
+            f"Generated questions for {title}: ({current_title}/{total_titles})")
         if title not in questions_by_title:
             questions_by_title[title] = []
         questions_by_title[title].extend(questions)
-        time.sleep(30)
+        current_title = current_title + 1
+        time.sleep(sleep_time)
 
     send_questions_by_title(book_id, title, start_page, questions_by_title,
                             current_title, total_titles)

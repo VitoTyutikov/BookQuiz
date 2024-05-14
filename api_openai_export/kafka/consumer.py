@@ -4,6 +4,9 @@ import sys
 
 from api_openai_export.utils import generate_questions
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s\t - %(levelname)s\t : %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 def kafka_consumer():
     conf = {
@@ -11,6 +14,7 @@ def kafka_consumer():
         'bootstrap.servers': "localhost:29092",
         'group.id': "generate_consumer",
         'auto.offset.reset': 'earliest',
+        'max.poll.interval.ms': '600000*2'
     }
 
     # Create Consumer instance
@@ -31,15 +35,16 @@ def kafka_consumer():
                     sys.stderr.write('%% %s [%d] reached end at offset %d\n' %
                                      (msg.topic(), msg.partition(), msg.offset()))
                 elif msg.error():
-                   raise KafkaException(msg.error())
+                  logging.error(msg.error())
             else:
-                print("Consumed event from topic {topic}: key = {key:12} value = {value:12}".format(
-                    topic=msg.topic(), key=msg.key().decode('utf-8'), value=msg.value().decode('utf-8')))
+                logging.info('Received message: %s\n' %
+                                 (msg.value().decode('utf-8')))
                 try:
                     generate_questions("../files/"+msg.value().decode('utf-8'))
                 except Exception as e:
-                    sys.stdout.write(
+                    logging.warning(
                         "Error while generating questions: "+str(e))
+                    
     except KeyboardInterrupt:
         sys.stderr.write('%% Aborted by user\n')
     finally:
