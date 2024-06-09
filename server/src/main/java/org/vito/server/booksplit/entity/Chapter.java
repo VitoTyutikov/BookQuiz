@@ -21,7 +21,7 @@ public class Chapter {
     @Column
     private Long chapterId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 1024)
     private String chapterTitle;
 
     @Column

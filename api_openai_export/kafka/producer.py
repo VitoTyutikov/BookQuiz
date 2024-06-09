@@ -18,8 +18,8 @@ def delivery_callback(err, msg):
     if err:
         logging.warning('ERROR: Message failed delivery: {}'.format(err))
     else:
-        logging.info("Produced event to topic {topic:30}:  value = {value:30}".format(
-            topic=msg.topic(),  value=msg.value().decode('utf-8')[0:30]))
+        logging.info("Produced event to topic {topic:30}:  value = {value:50}".format(
+            topic=msg.topic(),  value=msg.value().decode('utf-8')[0:50]))
 
 
 def send_questions_by_title(book_id, title, start_page, questions_by_title, current_title, total_titles):

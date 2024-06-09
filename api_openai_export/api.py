@@ -1,16 +1,13 @@
 import json
 import logging
 import os
-import sys
-import time
-from fastapi import FastAPI, Form, Header, UploadFile, File, HTTPException
+from fastapi import FastAPI, Form, Path, UploadFile, File, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse, JSONResponse
-import uvicorn
 from pydantic import BaseModel
 from pathlib import Path
-
-from api_openai_export.export.export_word import create_question_doc
+from export.export_word import create_question_doc
+# from api_openai_export.export.export_word import create_question_doc
 
 
 class DocumentRequest(BaseModel):
@@ -49,6 +46,17 @@ def generate_document(request: DocumentRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# if __name__ == "__main__":
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.get("/api/v1/book/file/{book_id}")
+async def get_book_file(book_id: int):
+    try:
+        file_dir = Path("./files")
+        for file in file_dir.iterdir():
+            if file.is_file() and file.name.startswith(f"{book_id}_"):
+                return FileResponse(path=file, filename=file.name, media_type='application/pdf')
+        raise HTTPException(status_code=404, detail="Book PDF not found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # uvicorn api:app --reload

@@ -9,7 +9,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - 22181:2181
-  
+    networks:
+      - microservice_network
+
   kafka:
     image: confluentinc/cp-kafka:latest
     restart: always
@@ -24,13 +26,11 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
+    networks:
+      - microservice_network
     
 
-
   db:
-    # depends_on:
-      # kafka
     image: postgres
     restart: always
     user: postgres
@@ -43,11 +43,58 @@ services:
     ports:
       - 5433:5432
     healthcheck:
-      test: [ "CMD", "pg_isready" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - microservice_network
 
+  # java-service:
+  #   build:
+  #     context: ./server
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     kafka:
+  #       condition: service_started
+  #   environment:
+  #     SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/BookSplit
+  #     SPRING_DATASOURCE_USERNAME: postgres
+  #     SPRING_DATASOURCE_PASSWORD: postgres
+  #   networks:
+  #     - microservice_network
+
+  # python-fastapi:
+  #   build:
+  #     context: .
+  #     dockerfile: api_openai_export/Dockerfile
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   networks:
+  #     - microservice_network
+
+  # python-consumer:
+  #   build:
+  #     context: .
+  #     dockerfile: api_openai_export/kafka/Dockerfile
+  #   depends_on:
+  #     kafka:
+  #       condition: service_started
+  #     python-fastapi:
+  #       condition: service_started
+  #   networks:
+  #     - microservice_network
 
 volumes:
   db-data:
+
+networks:
+  microservice_network:
+    driver: bridge

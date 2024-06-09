@@ -8,10 +8,13 @@ import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.vito.server.booksplit.entity.Book;
 
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 @Table(name = "\"user\"")
 @Entity
@@ -46,9 +49,18 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String role = "USER";
 
+
     @Column
     boolean isAccountNonLocked = true;
+
     
+    @ManyToMany
+    @JoinTable(
+            name = "user_books",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "book_id")
+    )
+    private Set<Book> books = new HashSet<>();
 
     @Override
     @Transient

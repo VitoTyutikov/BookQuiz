@@ -18,7 +18,7 @@ public class Answer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long answerId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 1024)
     private String answerText;
 
     @Column(columnDefinition = "boolean default false", nullable = false)

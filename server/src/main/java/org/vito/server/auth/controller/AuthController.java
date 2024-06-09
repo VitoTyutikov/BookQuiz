@@ -49,19 +49,19 @@ public class AuthController {
         }
         final String username = jwtTokenUtil.extractUsername(refreshToken);
         if (username == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refresh token is missing");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Refresh token is missing username");
         }
-        final UserDetails userDetails = userService.loadUserByUsername(username);
+        final var userDetails = userService.loadUserByUsername(username);
         if (blackListTokenService.isBlackListed(refreshToken)
                 || !jwtTokenUtil.validateToken(refreshToken, userDetails, "REFRESH")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token is invalid");
         }
-        BlackListToken blackListToken = new BlackListToken();
+        var blackListToken = new BlackListToken();
         blackListToken.setToken(refreshToken);
         blackListToken.setAddedAt(LocalDateTime.now());
         blackListTokenService.save(blackListToken);
-        final Map<String, String> tokens = jwtTokenUtil.generateTokens(userDetails);
-        AuthenticationResponse response = new AuthenticationResponse(
+        final var tokens = jwtTokenUtil.generateTokens(userDetails);
+        var response = new AuthenticationResponse(
                 tokens.get("accessToken"),
                 tokens.get("refreshToken"),
                 userDetails.getAuthorities().toString(),

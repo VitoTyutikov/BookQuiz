@@ -2,6 +2,8 @@ import logging
 from confluent_kafka import Consumer, KafkaException, KafkaError
 import sys
 
+
+
 from api_openai_export.utils import generate_questions
 
 logging.basicConfig(level=logging.INFO,
@@ -10,19 +12,16 @@ logging.basicConfig(level=logging.INFO,
 
 def kafka_consumer():
     conf = {
-        # Change this to your Kafka server configuration
         'bootstrap.servers': "localhost:29092",
         'group.id': "generate_consumer",
         'auto.offset.reset': 'earliest',
         'max.poll.interval.ms': '600000*2'
     }
 
-    # Create Consumer instance
+
     consumer = Consumer(**conf)
 
     try:
-        # Subscribe to topic
-        # Change 'your_topic_name' to the topic you are using
         consumer.subscribe(['generation_request'])
 
         while True:
@@ -48,7 +47,6 @@ def kafka_consumer():
     except KeyboardInterrupt:
         sys.stderr.write('%% Aborted by user\n')
     finally:
-        # Close down consumer to commit final offsets.
         consumer.close()
 
 

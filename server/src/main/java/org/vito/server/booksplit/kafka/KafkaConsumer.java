@@ -1,6 +1,5 @@
 package org.vito.server.booksplit.kafka;
 
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,7 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "generation_progress", groupId = "progress")
     public void listenGenerationProgress(String generationProgress) {
-        //TODO: send to android
+        // TODO: send to android
         try {
             GenerationProgressDTO progress = objectMapper.readValue(generationProgress, GenerationProgressDTO.class);
         } catch (JsonProcessingException e) {
@@ -32,7 +31,6 @@ public class KafkaConsumer {
 
     @KafkaListener(topics = "generation_response", groupId = "response")
     public void listenGenerationResponse(String generationResponse) {
-        //TODO: save to database
         GenerationResponseDTO response;
         try {
             response = objectMapper.readValue(generationResponse, GenerationResponseDTO.class);
@@ -44,6 +42,5 @@ public class KafkaConsumer {
 
         System.out.println("Received Message in topic generation_response for book_id = " + response.bookId());
     }
-
 
 }
