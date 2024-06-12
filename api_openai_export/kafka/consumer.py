@@ -17,13 +17,9 @@ def kafka_consumer():
         'auto.offset.reset': 'earliest',
         'max.poll.interval.ms': '600000*2'
     }
-
-
     consumer = Consumer(**conf)
-
     try:
         consumer.subscribe(['generation_request'])
-
         while True:
             msg = consumer.poll(timeout=1.0)
             if msg is None:
@@ -43,7 +39,6 @@ def kafka_consumer():
                 except Exception as e:
                     logging.warning(
                         "Error while generating questions: "+str(e))
-                    
     except KeyboardInterrupt:
         sys.stderr.write('%% Aborted by user\n')
     finally:

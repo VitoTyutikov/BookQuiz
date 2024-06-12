@@ -86,7 +86,6 @@ def extract_chapters_text(pdf_path, encoding, max_tokens=15000):
 
 
 def generate_questions(file_path: str):
-
     choosed_model = "gpt-3.5-turbo"
     # choosed_model = "gpt-4"
     # choosed_model = "gpt-4o"
@@ -115,42 +114,33 @@ def generate_questions(file_path: str):
     current_title = 1
     prev_start_page = chapters[0][0]
     for start_page, title, chapter in chapters:
-
         if prev_title != title:
-            send_questions_by_title(book_id,
-                                    prev_title, prev_start_page, questions_by_title, current_title, total_titles)
+            send_questions_by_title(book_id, prev_title, prev_start_page, questions_by_title, current_title, total_titles)
             prev_start_page = start_page
             prev_title = title
-
         response = client.chat.completions.create(
             model=choosed_model,
-            messages=[
-                {"role": "system", "content": "You are an assistant who creates questions based on provided text. \
-                You must return an array of questions and each of the questions has an array of answers. Questions should be on the text of the book only.\
-                All answers should have a boolean variable named is_correct and store true if the answer is correct and false if the answer is incorrect.\
+            messages=[{"role": "system", "content": "You are an assistant who creates questions based on provided text. \
+                You must return an array of questions and each of the questions has an array of answers. Questions \
+                    should be on the text of the book only.\
+                All answers should have a boolean variable named is_correct and store true if the answer is correct \
+                    and false if the answer is incorrect.\
                 There should be only one correct answer for each question.\
                 Response should be JSON object. It should have fileds with names: \"questions\" for questions(array),\
-                \"question\" for question(string), \"answers\" for answers(array), \"answer\" for answer(string) and \"is_correct\" for each answer."
-                 },
-                {"role": "user", "content": chapter +
-                    "\n Create 2 questions on the text above in the language of the text, language is important. Don't use the word text in questions."}
-            ],
-            response_format={"type": "json_object"}
-        )
-
-        questions = json.loads(
-            str(response.choices[0].message.content)).get('questions')
-
-        logging.info(
-            f"Generated questions for {title}: ({current_title}/{total_titles})")
+                \"question\" for question(string), \"answers\" for answers(array), \"answer\" for answer(string) and\
+                    \"is_correct\" for each answer."
+                 },{"role": "user", "content": chapter +
+                    "\n Create 2 questions on the text above in the language of the text, language is important. \
+                        Don't use the word text in questions."}
+            ],response_format={"type": "json_object"})
+        questions = json.loads(str(response.choices[0].message.content)).get('questions')
+        logging.info(f"Generated questions for {title}: ({current_title}/{total_titles})")
         if title not in questions_by_title:
             questions_by_title[title] = []
         questions_by_title[title].extend(questions)
         current_title = current_title + 1
         time.sleep(sleep_time)
-
-    send_questions_by_title(book_id, title, start_page, questions_by_title,
-                            current_title, total_titles)
+    send_questions_by_title(book_id, title, start_page, questions_by_title,current_title, total_titles)
 
 
 # generate_questions('/home/shieldbr/projects/BookQuiz/Horstmann C.S. - Core Java. Vol. 2. Advanced Features - 2019.pdf')

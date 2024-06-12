@@ -71,7 +71,6 @@ public class BookService {
             Question question = new Question();
             question.setQuestionText(questionDTO.question());
             question.setChapter(chapter);
-
             questionRepository.save(question);
 
             questionDTO.answers().forEach(answerDTO -> {
